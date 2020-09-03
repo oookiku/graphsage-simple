@@ -82,16 +82,16 @@ struct MeanAggregatorImpl : nn::Module {
     int64_t samp_neighs_size = samp_neighs.size();
     int64_t unique_nodes_size = unique_nodes.size();
 
-    std::vector<int64_t> column_indices(samp_neighs_size); // TODO
-    std::vector<int64_t> row_indices(unique_nodes_size);   // TODO
+    std::vector<int64_t> column_indices;
+    std::vector<int64_t> row_indices;
     for (auto&& samp_neight : samp_neighs) {
-      for (auto&& n : samp_neight | boost::adaptors::indexed()) {
-        column_indices[n.index()] = unique_nodes[n.value()];
+      for (auto&& n : samp_neight) {
+        column_indices.push_back(unique_nodes[n]);
       }
     }
-    for (int64_t i = 0, idx = 0; i < samp_neighs_size; ++i) {
+    for (int64_t i = 0; i < samp_neighs_size; ++i) {
       for (int64_t j = 0; j < samp_neighs[i].size(); ++j) {
-        row_indices[idx++] = i;
+        row_indices.push_back(i);
       }
     }
 
