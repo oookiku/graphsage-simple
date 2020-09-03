@@ -72,8 +72,6 @@ struct EncoderImpl : nn::Module {
   torch::Tensor weight; 
 };
 
-struct MeanEncoderImpl : EncoderImpl<MeanAggregator> { };
-TORCH_MODULE(MeanEncoder);
+TORCH_MODULE_IMPL(MeanEncoder, EncoderImpl<MeanAggregator>);
 
-// struct MaxpoolEncoderImpl : EncoderImpl<MaxpoolAggregator> { };
-// TORCH_MODULE(MaxpoolAggregator);
+// TORCH_MODULE(MaxpoolAggregator, EncoderImple<MaxpoolAggregator>);
