@@ -9,6 +9,7 @@
 
 namespace nn = torch::nn;
 
+
 struct MeanAggregatorImpl : nn::Module {
 
   MeanAggregatorImpl(const nn::Embedding ifeatures,
@@ -19,7 +20,7 @@ struct MeanAggregatorImpl : nn::Module {
       gcn(igcn)
   { }
 
-  torch::Tensor forward(const torch::Tensor &nodes,
+  torch::Tensor forward(const std::vector<int64_t> &nodes,
                         const std::vector<std::vector<int64_t>> &to_neighs,
                         const int64_t num_sample=10)
   {
@@ -28,16 +29,16 @@ struct MeanAggregatorImpl : nn::Module {
     //
     std::vector<std::vector<int64_t>> samp_neighs;
     if (gcn) {
-      samp_neighs.resize(nodes.size(0));
+      samp_neighs.resize(nodes.size());
       for (auto&& p : to_neighs | boost::adaptors::indexed()) {
         // sample all neighbors and myself
         samp_neighs[p.index()] = p.value();
-        samp_neighs[p.index()].push_back(nodes[p.index()].item<int64_t>());
+        samp_neighs[p.index()].push_back(nodes[p.index()]);
       }
     }
     else {
       if (num_sample != 0) {
-        samp_neighs.resize(nodes.size(0));
+        samp_neighs.resize(nodes.size());
         for (auto&& p : to_neighs | boost::adaptors::indexed()) {
           // sample (num_sample)-nodes randomly
           // note: num_sample=min(p.value.size(), num_sample)
@@ -110,10 +111,18 @@ struct MeanAggregatorImpl : nn::Module {
     //
     // extracting features of the unique nodes
     //
-    auto embed_matrix = features(torch::from_blob(unique_nodes_list.data(), 
-                                                  unique_nodes_list.size())
-                                 .to(torch::kInt64));
-    if (cuda) embed_matrix.cuda();
+    torch::Tensor embed_matrix;
+    if (cuda) {
+      embed_matrix = features(torch::from_blob(unique_nodes_list.data(), 
+                                               unique_nodes_list.size())
+                              .to(torch::kInt64)
+                              .cuda());
+    }
+    else {
+      embed_matrix = features(torch::from_blob(unique_nodes_list.data(), 
+                                               unique_nodes_list.size())
+                              .to(torch::kInt64));
+    }
 
 
     //
