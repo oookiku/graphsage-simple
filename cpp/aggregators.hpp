@@ -9,15 +9,13 @@
 
 namespace nn = torch::nn;
 
-
+template<class Embedding = nn::Embedding,
+         bool CUDA = false,
+         bool GCN = false>
 struct MeanAggregatorImpl : nn::Module {
 
-  MeanAggregatorImpl(const nn::Embedding ifeatures,
-                     const bool icuda=false,
-                     const bool igcn=false)
-    : features(ifeatures),
-      cuda(icuda),
-      gcn(igcn)
+  MeanAggregatorImpl(const Embedding ifeatures)
+    : features(ifeatures)
   { }
 
   torch::Tensor forward(const std::vector<int64_t> &nodes,
@@ -28,7 +26,7 @@ struct MeanAggregatorImpl : nn::Module {
     // sampling neighbor nodes by using adj_list
     //
     std::vector<std::vector<int64_t>> samp_neighs;
-    if (gcn) {
+    if constexpr (GCN) {
       samp_neighs.resize(nodes.size());
       for (auto&& p : to_neighs | boost::adaptors::indexed()) {
         // sample all neighbors and myself
@@ -103,7 +101,7 @@ struct MeanAggregatorImpl : nn::Module {
       const int64_t row = row_indices[i];
       mask[row][column] = 1;
     }
-    if (cuda) mask.cuda();
+    if constexpr (CUDA) mask.cuda();
     auto num_neigh = mask.sum(1, /*keepdim=*/true);
     mask = mask.div(num_neigh);
 
@@ -112,7 +110,7 @@ struct MeanAggregatorImpl : nn::Module {
     // extracting features of the unique nodes
     //
     torch::Tensor embed_matrix;
-    if (cuda) {
+    if constexpr (CUDA) {
       embed_matrix = features(torch::from_blob(unique_nodes_list.data(), 
                                                unique_nodes_list.size())
                               .to(torch::kInt64)
@@ -124,7 +122,6 @@ struct MeanAggregatorImpl : nn::Module {
                               .to(torch::kInt64));
     }
 
-
     //
     // calculating mean features
     //
@@ -132,8 +129,6 @@ struct MeanAggregatorImpl : nn::Module {
     return to_feats;
   }
 
-  nn::Embedding features;
-  bool cuda, gcn;
+  Embedding features;
 };
 
-TORCH_MODULE(MeanAggregator);
