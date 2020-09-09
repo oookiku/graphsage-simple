@@ -75,7 +75,7 @@ load_cora()
   while (file2 >> info_edge[0] >> info_edge[1]) {
     auto paper1 = get_node_idx(info_edge[0], node_map);
     auto paper2 = get_node_idx(info_edge[1], node_map);
-    std::cout << paper1 << " " << paper2 << std::endl;
+    // std::cout << paper1 << " " << paper2 << std::endl;
     adj_lists[paper1].push_back(paper2);
     adj_lists[paper2].push_back(paper1);
   }

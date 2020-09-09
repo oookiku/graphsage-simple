@@ -1,6 +1,5 @@
 #pragma once
 
-#include <torch/torch.h>
 #include "aggregators.hpp"
 #include "typedef.hpp"
 
@@ -43,16 +42,27 @@ struct EncoderImpl : nn::Module {
     torch::Tensor self_feats, combined;
     if constexpr (!GCN) {
       if constexpr (CUDA) {
-        self_feats = features(torch::from_blob(nodes.data(), 
-                                               nodes.size())
-                              .to(torch::kInt64)
-                              .cuda());
+        if constexpr (std::is_same_v<Embedding, nn::Embedding>) {
+          self_feats = features(torch::from_blob(nodes.data(), 
+                                                 nodes.size())
+                                .to(torch::kInt64)
+                                .cuda());
+        }
+        else {
+          self_feats = features(nodes).t();
+        }
       }
       else {
-        self_feats = features(torch::from_blob(nodes.data(),
-                                               nodes.size())
-                              .to(torch::kInt64));
+        if constexpr (std::is_same_v<Embedding, nn::Embedding>) {
+          self_feats = features(torch::from_blob(nodes.data(), 
+                                                 nodes.size())
+                                .to(torch::kInt64));
+        }
+        else {
+          self_feats = features(nodes).t();
+        }
       }
+
       combined = torch::cat({self_feats, neigh_feats}, 1);
     }
     else {

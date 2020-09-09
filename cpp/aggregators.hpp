@@ -6,6 +6,7 @@
 #include <vector>
 #include <random>
 #include <algorithm>
+#include <type_traits>
 
 namespace nn = torch::nn;
 
@@ -18,9 +19,9 @@ struct MeanAggregatorImpl : nn::Module {
     : features(ifeatures)
   { }
 
-  torch::Tensor forward(const std::vector<int64_t> &nodes,
-                        const std::vector<std::vector<int64_t>> &to_neighs,
-                        const int64_t num_sample=10)
+  torch::Tensor forward(std::vector<int64_t> &nodes,
+                        std::vector<std::vector<int64_t>> &to_neighs,
+                        int64_t num_sample=10)
   {
     //
     // sampling neighbor nodes by using adj_list
@@ -57,6 +58,7 @@ struct MeanAggregatorImpl : nn::Module {
         samp_neighs = to_neighs;
       }
     }
+
 
     //
     // creating unique nodes list
@@ -111,24 +113,35 @@ struct MeanAggregatorImpl : nn::Module {
     //
     torch::Tensor embed_matrix;
     if constexpr (CUDA) {
-      embed_matrix = features(torch::from_blob(unique_nodes_list.data(), 
-                                               unique_nodes_list.size())
-                              .to(torch::kInt64)
-                              .cuda());
+      if constexpr (std::is_same_v<Embedding, nn::Embedding>) {
+        embed_matrix = features(torch::from_blob(unique_nodes_list.data(), 
+                                                 unique_nodes_list.size())
+                                .to(torch::kInt64)
+                                .cuda());
+      }
+      else {
+        embed_matrix = features(unique_nodes_list).t();
+      }
     }
     else {
-      embed_matrix = features(torch::from_blob(unique_nodes_list.data(), 
-                                               unique_nodes_list.size())
-                              .to(torch::kInt64));
+      if constexpr (std::is_same_v<Embedding, nn::Embedding>) {
+
+        embed_matrix = features(torch::from_blob(unique_nodes_list.data(), 
+                                                 unique_nodes_list.size())
+                                .to(torch::kInt64));
+      }
+      else {
+        embed_matrix = features(unique_nodes_list).t();
+      }
     }
+
 
     //
     // calculating mean features
     //
-    torch::Tensor to_feats = mask.mm(embed_matrix);
+    torch::Tensor to_feats = mask.mm(embed_matrix); 
     return to_feats;
   }
 
   Embedding features;
 };
-
