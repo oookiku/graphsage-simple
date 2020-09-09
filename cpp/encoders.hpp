@@ -29,41 +29,31 @@ struct EncoderImpl : nn::Module {
   { }
 
 
-  torch::Tensor forward(std::vector<int64_t> &nodes) 
+  torch::Tensor forward(const torch::Tensor &nodes) 
   {
-    matrix_int64 sorted_adj_list(nodes.size());
-    for (int64_t i = 0; i < nodes.size(); ++i) {
-      sorted_adj_list[i] = adj_list[nodes[i]];
+    matrix_int64 sorted_adj_list(nodes.size(0));
+    for (int64_t i = 0; i < nodes.size(0); ++i) {
+      sorted_adj_list[i] = adj_list[nodes[i].item<int64_t>()];
     }
-    auto neigh_feats = aggregator->forward(nodes,
-                                           sorted_adj_list,
-                                           num_sample);
+    auto neigh_feats = aggregator(nodes,
+                                  sorted_adj_list,
+                                  num_sample);
 
     torch::Tensor self_feats, combined;
     if constexpr (!GCN) {
       if constexpr (CUDA) {
-        if constexpr (std::is_same_v<Embedding, nn::Embedding>) {
-          self_feats = features(torch::from_blob(nodes.data(), 
-                                                 nodes.size())
-                                .to(torch::kInt64)
-                                .cuda());
-        }
-        else {
-          self_feats = features(nodes).t();
-        }
+        self_feats = features(nodes).cuda();
       }
       else {
-        if constexpr (std::is_same_v<Embedding, nn::Embedding>) {
-          self_feats = features(torch::from_blob(nodes.data(), 
-                                                 nodes.size())
-                                .to(torch::kInt64));
-        }
-        else {
-          self_feats = features(nodes).t();
-        }
+        self_feats = features(nodes);
       }
 
-      combined = torch::cat({self_feats, neigh_feats}, 1);
+      if constexpr (std::is_same_v<Embedding, nn::Embedding>) {
+        combined = torch::cat({self_feats, neigh_feats}, 1);
+      }
+      else {
+        combined = torch::cat({self_feats.t(), neigh_feats}, 1);
+      }
     }
     else {
       combined = neigh_feats;

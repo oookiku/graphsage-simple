@@ -15,15 +15,15 @@ struct SupervisedGraphSageImpl : nn::Module {
   { }
 
 
-  torch::Tensor forward(std::vector<int64_t> &nodes)
+  torch::Tensor forward(torch::Tensor &nodes)
   {
     auto embeds = enc(nodes);
     auto scores = weight.mm(embeds);
     return scores.t();
   }
 
-  auto loss(std::vector<int64_t> &nodes,
-                     torch::Tensor &labels)
+  auto loss(torch::Tensor &nodes,
+            torch::Tensor &labels)
   {
     auto scores = forward(nodes);
     return xent(scores, labels.squeeze());

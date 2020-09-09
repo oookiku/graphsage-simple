@@ -108,13 +108,17 @@ int main()
   for (int64_t batch = 0; batch < 100; ++batch) {
     std::cout << "batch = " << batch << std::endl;
 
-    std::vector<int64_t> batch_nodes;
+    std::vector<int64_t> batch_nodes_tmp;
     std::copy(train.begin(),
               train.begin()+255,
-              std::back_inserter(batch_nodes));
+              std::back_inserter(batch_nodes_tmp));
 
-    auto train_labels = torch::zeros(batch_nodes.size(), torch::kInt64);
-    for (auto&& e : batch_nodes | boost::adaptors::indexed()) {
+    auto batch_nodes = torch::from_blob(batch_nodes_tmp.data(),
+                                        batch_nodes_tmp.size())
+                       .to(torch::kInt64);
+
+    auto train_labels = torch::zeros(batch_nodes_tmp.size(), torch::kInt64);
+    for (auto&& e : batch_nodes_tmp | boost::adaptors::indexed()) {
       train_labels[e.index()] = labels[e.value()].item<int64_t>();
     }
 
@@ -123,12 +127,12 @@ int main()
                  engine);
 
     optimizer.zero_grad();
-/*
+
     auto loss = graphsage->loss(batch_nodes,
                                 train_labels);
 
     loss.backward();
-*/
+
     optimizer.step();
   }
 
