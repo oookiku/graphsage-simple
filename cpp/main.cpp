@@ -7,7 +7,7 @@
 
 
 namespace nn = torch::nn;
-
+namespace F  = torch::nn::functional;
 
 // 1st layer
 using mean_agg_impl = MeanAggregatorImpl<nn::Embedding,
@@ -66,14 +66,16 @@ int main()
                engine);
 
   std::vector<int64_t> test, val, train;
-  std::copy(rand_indices.begin(),
-            rand_indices.begin()+999,
+  auto begin = rand_indices.begin();
+  auto end   = rand_indices.end();
+  std::copy(begin,
+            begin+999,
             std::back_inserter(test));
-  std::copy(rand_indices.begin()+1000,
-            rand_indices.begin()+1499,
+  std::copy(begin+1000,
+            begin+1499,
             std::back_inserter(val));
-  std::copy(rand_indices.begin()+1500,
-            rand_indices.end(),
+  std::copy(begin+1500,
+            end,
             std::back_inserter(train));
 
 
@@ -113,9 +115,10 @@ int main()
               train.begin()+255,
               std::back_inserter(batch_nodes_tmp));
 
+
     auto batch_nodes = torch::from_blob(batch_nodes_tmp.data(),
-                                        batch_nodes_tmp.size())
-                       .to(torch::kInt64);
+                                        batch_nodes_tmp.size(),
+                                        torch::TensorOptions().dtype(torch::kInt64));
 
     auto train_labels = torch::zeros(batch_nodes_tmp.size(), torch::kInt64);
     for (auto&& e : batch_nodes_tmp | boost::adaptors::indexed()) {
@@ -127,12 +130,9 @@ int main()
                  engine);
 
     optimizer.zero_grad();
-
-    auto loss = graphsage->loss(batch_nodes,
-                                train_labels);
-
-    loss.backward();
-
+    auto output = graphsage(batch_nodes);
+    // auto loss = F::cross_entropy(output, train_labels.squeeze());
+    // loss.backward();
     optimizer.step();
   }
 
