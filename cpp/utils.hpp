@@ -1,18 +1,9 @@
 #pragma once
 
 #include <iostream>
+#include <unordered_map>
 #include <boost/range/adaptor/indexed.hpp>
 
-int64_t get_node_idx(const int64_t node_id,
-                     const std::vector<int64_t> &node_map)
-{
-  for (auto&& p : node_map | boost::adaptors::indexed()) {
-    if (p.value() == node_id) {
-      return (int64_t)p.index();
-    }
-  }
-  return -1;
-}
 
 std::tuple<torch::Tensor,
            torch::Tensor,
@@ -23,7 +14,8 @@ load_cora()
   constexpr int64_t num_feats = 1433;
   auto feat_data = torch::zeros({num_nodes, num_feats}, torch::kFloat32);
   auto labels = torch::empty({num_nodes, 1}, torch::kInt64);
-  std::vector<int64_t> node_map(num_nodes), label_map(num_nodes);
+  std::unordered_map<int64_t, int64_t> node_map(num_nodes);
+  std::vector<int64_t> label_map(num_nodes);
 
   //
   // loading node infomation & converting node id into idx of arrays 
@@ -49,7 +41,7 @@ load_cora()
       feat_data[idx][i] = static_cast<float>(info_feats[i+1]);
     }
  
-    node_map[idx] = info_feats[0];
+    node_map[info_feats[0]] = idx;
      
     std::string v;
     file1 >> v;
@@ -73,8 +65,8 @@ load_cora()
 
   int64_t info_edge[2];
   while (file2 >> info_edge[0] >> info_edge[1]) {
-    auto paper1 = get_node_idx(info_edge[0], node_map);
-    auto paper2 = get_node_idx(info_edge[1], node_map);
+    auto paper1 = node_map.at(info_edge[0]);
+    auto paper2 = node_map.at(info_edge[1]);
     // std::cout << paper1 << " " << paper2 << std::endl;
     adj_lists[paper1].push_back(paper2);
     adj_lists[paper2].push_back(paper1);
