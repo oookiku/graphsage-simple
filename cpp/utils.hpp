@@ -15,7 +15,7 @@ load_cora()
   auto feat_data = torch::zeros({num_nodes, num_feats}, torch::kFloat32);
   auto labels = torch::empty({num_nodes, 1}, torch::kInt64);
   std::unordered_map<int64_t, int64_t> node_map(num_nodes);
-  std::vector<int64_t> label_map(num_nodes);
+  std::unordered_map<std::string, int64_t> label_map;
 
   //
   // loading node infomation & converting node id into idx of arrays 
@@ -37,15 +37,22 @@ load_cora()
       info_feats[i] = u;
     }
 
+    // features
     for (int64_t i = 0; i < num_feats; ++i) {
       feat_data[idx][i] = static_cast<float>(info_feats[i+1]);
     }
  
+    // nodes
     node_map[info_feats[0]] = idx;
-     
+
+    // labels
     std::string v;
     file1 >> v;
-    labels[idx] = static_cast<int64_t>(v.size());
+    if (!label_map.count(v)) {
+      label_map[v] = static_cast<int64_t>(label_map.size());
+    }
+    labels[idx] = label_map.at(v);
+
     idx++;
   }
 

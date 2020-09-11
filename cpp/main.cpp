@@ -129,10 +129,11 @@ int main()
                  train.end(),
                  engine);
 
+
     optimizer.zero_grad();
     auto output = graphsage(batch_nodes);
-    // auto loss = F::cross_entropy(output, train_labels.squeeze());
-    // loss.backward();
+    auto loss = F::cross_entropy(output, train_labels.squeeze());
+    loss.backward();
     optimizer.step();
   }
 
